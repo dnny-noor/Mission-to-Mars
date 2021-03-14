@@ -12,6 +12,8 @@ def scrape_all():
     browser = Browser('chrome', **executable_path, headless=True)
 
     news_title, news_paragraph = mars_news(browser)
+    hemisphere_image_urls = mars_hemispheres(browser)
+
 
     # Run all scraping functions and store results in a dictionary
     data = {
@@ -19,6 +21,7 @@ def scrape_all():
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
+        "hemispheres": hemisphere_image_urls,
         "last_modified": dt.datetime.now()
     }
 
@@ -95,6 +98,42 @@ def mars_facts():
 
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-striped")
+
+def mars_hemispheres(browser):
+    url = 'https://data-class-mars-hemispheres.s3.amazonaws.com/Mars_Hemispheres/index.html'
+    browser.visit(url)
+
+    html = browser.html
+    hemisphere_soup = soup(html, 'html.parser')
+
+    hemisphere_image_urls = []
+
+    links = hemisphere_soup.find_all("div", class_="item")
+
+    for link in links:
+        hemispheres = {}
+        
+        title = link.find("h3").text
+        
+        hemisphere_link = link.find("a", class_="product-item").get("href")
+        hemisphere_url = f'https://data-class-mars-hemispheres.s3.amazonaws.com/Mars_Hemispheres/{hemisphere_link}'
+        
+        browser.visit(hemisphere_url)
+        
+        pic_html = browser.html
+        pic_soup = soup(pic_html, 'html.parser')
+            
+        pic_search = pic_soup.find("div", class_="downloads")
+        pic_link = pic_search.find("a", target="_blank").get('href')
+        pic_url = f'https://data-class-mars-hemispheres.s3.amazonaws.com/Mars_Hemispheres/{pic_link}'
+
+        hemispheres["title"] = title
+        hemispheres["img_url"] = pic_url
+            
+        hemisphere_image_urls.append(hemispheres)
+
+    return hemisphere_image_urls
+
 
 if __name__ == "__main__":
 
